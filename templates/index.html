@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Websockets</title>
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Fira Sans', sans-serif;
+        }
+        body {
+            width: 100vw;
+        }
+        .chats-container {
+            width: 100vw;
+            display: flex;
+            justify-content: space-around;
+        }
+        .chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chat + .chat {
+            margin-left: 10px;
+        }
+        .chat-content {
+            height: 500px;
+            border: 1px solid grey;
+            border-radius: 5px;
+            overflow-y: scroll;
+            margin-bottom: 15px;
+        }
+        .input {
+            margin-bottom: 5px;
+            height: 30px;
+        }
+        .add-message {
+            height: 30px;
+            cursor: pointer;
+        }
+        .message-item {
+            border-bottom: 1px solid grey;
+            border-radius: 5px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body style="display: flex">
+<div class="chats-container">
+    <div class="chat">
+        <h1>Room 1:</h1>
+        <ul id="room-1" class="chat-content">
+            {% if '1' in messages_by_rooms %}
+                {% for message in messages_by_rooms['1'] %}
+                    <li class="message-item">{{ message }}</li>
+                {% endfor %}
+            {% endif  %}
+        </ul>
+        <input type="text" id="room-1-message" class="input">
+        <button type="button" data-room="1" data-messageinput="room-1-message" class="add-message">Add message</button>
+    </div>
+
+    <div class="chat">
+        <h1>Room 2:</h1>
+        <ul id="room-2" class="chat-content">
+            {% if '2' in messages_by_rooms %}
+                {% for message in messages_by_rooms['2'] %}
+                    <li class="message-item">{{ message }}</li>
+                {% endfor %}
+            {% endif  %}
+        </ul>
+        <input type="text" id="room-2-message" class="input">
+        <button type="button" data-room="2" data-messageinput="room-2-message" class="add-message">Add message</button>
+    </div>
+</div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.3/socket.io.js"></script>
+    <script type="text/javascript" charset="utf-8">
+
+        document.addEventListener("DOMContentLoaded", runApplication);
+
+        function runApplication() {
+            function addMessageToContainer(container, message) {
+                const messageNode = document.createElement('li');
+                messageNode.classList.add('message-item');
+                messageNode.innerHTML = message;
+                container.appendChild(messageNode);
+            }
+
+            var socket = io();
+            socket.on('connect', function() {
+                socket.emit('join', '1');
+                socket.emit('join', '2');
+            });
+
+            // Обработка входящих сообщений
+            socket.on('new_message', function(data) {
+                const room = data.room;
+                const text = data.text;
+                const $container = document.getElementById('room-' + room);
+                addMessageToContainer($container, text);
+            });
+
+            socket.on('message', function(data) {
+                console.log(data);
+            });
+
+            // Отправка сообщений
+            const buttons = document.querySelectorAll('.add-message');
+            for (let i = 0; i < buttons.length; i++) {
+                buttons[i].addEventListener('click', function(event) {
+                    /*
+                    console.log(event);
+                    console.log(event.target);
+                    console.log(event.target.dataset.room);
+                    console.log(event.target.dataset.messageinput);
+                    */
+                    const $input = document.getElementById(event.target.dataset.messageinput);
+                    socket.emit('add_message', {
+                        room: event.target.dataset.room,
+                        text: $input.value
+                    });
+                    $input.value = '';
+                });
+            }
+        }
+    </script>
+</body>
+</html>
